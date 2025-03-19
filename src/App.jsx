@@ -6,32 +6,13 @@ import Notification from '../Components/Notification'
 //Componentes
 
 import PersonForm from '../Components/PersonForm'
+import Persons from '../Components/Persons'
+import Filter from '../Components/Filter'
 
 //Estilos 
 
 import './index.css'
 
-
-
-const Persons = ({name, number, deletePerson}) => {
-    return (
-        <p>{name} {number} <Button onClick={deletePerson} text={'delete'} /></p>
-    )
-}
-
-const Filter = ({handleFilter, filter}) => {
-    return (
-        <div>
-            filter shown with <input 
-                type='text'
-                name='filter'
-                value={filter}
-                placeholder='Search'
-                onChange={handleFilter}
-            />
-        </div>
-    )
-}
 
 const App = () => {
   const [persons, setPersons] = useState([])
