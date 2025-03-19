@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import Button from '../Components/Button'
+import { useState, useEffect, useCallback } from 'react'
 import phonesServices from './services/phones'
 import Notification from '../Components/Notification'
 
@@ -23,6 +22,18 @@ const App = () => {
     number:'',
   })
   const [filter, setFilter] = useState('')
+
+  const getContacts = useCallback(async() => {
+    
+    const contacts = await phonesServices.getAll()
+    console.log(contacts.usuarios)
+    setPersons(contacts.usuarios)
+  }, [])
+
+
+  useEffect(() => {
+    getContacts()
+  },[getContacts])
 
   const handleInput = (event) => {
     setState({
@@ -53,16 +64,8 @@ const App = () => {
 
   const filteredPersons = persons.filter(person => person.name.toLowerCase().includes(filter.toLowerCase()))
 
-  useEffect(() => {
-    const fetchData = async () => {
-        const request = await phonesServices.getAll()
-        setPersons(request)
-    }
 
-    fetchData()
-  },[])
   
-
   const addPerson = async (event) => {
     event.preventDefault()
 
@@ -86,13 +89,11 @@ const App = () => {
 
     const newPerson = {
         name: state.name,
-        number: state.number,
-        id: String(persons.length + 1)
+        number: state.number
     }
     
-    const request = await phonesServices.addPerson(newPerson)
+    await phonesServices.addPerson(newPerson)
 
-    setPersons(persons.concat(request))
     setNotification(`${newPerson.name} se ha añadido exitosamente`)
     setNotificationType('success')
     rest()
@@ -100,6 +101,7 @@ const App = () => {
         name: '',
         number: ''
     })
+    getContacts()
   }
 
   const deletePersons =  async (id) => {
@@ -113,7 +115,7 @@ const App = () => {
 
     try{
         await phonesServices.deletePerson(id)
-        setPersons(persons.filter(person => person.id !== id))
+
         setNotification(`${person.name} se ha eliminado correctamente`)
         setNotificationType('success')
         rest()
@@ -123,7 +125,7 @@ const App = () => {
         setNotification(`${person.name} no está registrado en el sistema`)
         setNotificationType('error')
         rest()
-        setPersons(persons.filter(person => person.id !== id))
+
     }
   }
 
@@ -138,7 +140,7 @@ const App = () => {
 
     try{
         const request = await phonesServices.updatePerson(id, newPerson)
-        setPersons(persons.map(person => person.id !== id ? person: request))
+
         setNotification(`${newPerson.name} se ha actualizado correctamente`)
         setNotificationType('success')
         rest()
@@ -149,7 +151,6 @@ const App = () => {
         setNotification(`${newPerson.name} no está registrado en el sistema`)
         setNotificationType('error')
         rest()
-        setPersons(persons.filter(person => person.id !== id))
         return false
     }
   }
