@@ -1,123 +1,189 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from 'react'
 import Button from '../Components/Button'
-import Note from "../Components/Notes"
-import Notification from "../Components/Notification"
+import phonesServices from './services/phones'
+import Notification from '../Components/Notification'
 
-//Services
+//Componentes
 
-import notesService from "./services/notes"
-
+import PersonForm from '../Components/PersonForm'
 
 //Estilos 
 
 import './index.css'
 
-const App = () => {
 
-    const [notas, setNotas] = useState([])
-    const [newNote, setNewNote] = useState('')
-    const [showAll, setShowAll] = useState(true)
-    const [errorMessage, setErrorMessage] = useState('')
 
-    const getNotes = useCallback(async () => {
-        const notes = await notesService.getAll()
-        setNotas(notes.notes)
-    },[])
+const Persons = ({name, number, deletePerson}) => {
+    return (
+        <p>{name} {number} <Button onClick={deletePerson} text={'delete'} /></p>
+    )
+}
 
-    useEffect(() => {
-        getNotes()
-    }, [getNotes])
-
-    const notesToShow = showAll ? notas : notas.filter(note => note.important)
-
-    const addNote = async (event) => {
-        event.preventDefault()
-
-        try{
-            if(newNote === '') return alert('No puedes agregar una nota vacia')
-
-                const nuevaNota = {
-                    id: String(notas.length + 1),
-                    content: newNote,
-                    important: Math.random() < 0.5,
-                }
-        
-                await notesService.create(nuevaNota)
-                alert('Nota añadida con exito')
-                getNotes()
-
-        }catch(error){
-            console.log(error.message)
-        }finally{
-            setNewNote('')
-        }
-    }
-
-    const handleNoteChange = (event) => {
-        setNewNote(event.target.value)
-    }
-
-    const toggleImportance = async (id) => {
-        const note = notas.find(note => note.id === id)
-
-        try{
-        
-            await notesService.update(id)
-            alert('Nota actualizada con exito')
-
-        }catch (error){
-            console.log(error.message)
-            setErrorMessage(
-                `Note ${note.content} was already removed from server`
-            )
-
-            setTimeout(() => {
-                setErrorMessage('')
-            },4000)
-
-            setNotas(notas.filter(nota => nota.id !== id))
-        }finally{
-            getNotes()
-        }
-    }
-
-    const deleteNote = async (id) => {
-        try{
-
-            await notesService.deleteNota(id)
-            alert('Nota eliminada con exito')
-            
-        }catch(error){
-            console.log(error.message)
-            setErrorMessage(
-                `No se pudo eliminar la nota ya que no existe`
-            )
-        }finally{
-            getNotes()
-        }
-    }
-
-    const changeAll = () => setShowAll(current => !current)
-
+const Filter = ({handleFilter, filter}) => {
     return (
         <div>
-        <h1>Notes</h1>
-        { errorMessage !== '' && <Notification message ={errorMessage} /> }
-        <div>
-            <Button onClick={changeAll} text={showAll ? 'important' : 'all'}/>
-        </div>
-        <ul>
-            {notesToShow.map((note) => <Note key={note.id} note={note} toggleImportance={() => toggleImportance(note.id)} deleteNote={() => deleteNote(note.id)}/>)}
-        </ul>
-        <form onSubmit={addNote}>
-            <input 
-                value={newNote}
-                onChange={handleNoteChange}
+            filter shown with <input 
+                type='text'
+                name='filter'
+                value={filter}
+                placeholder='Search'
+                onChange={handleFilter}
             />
-            <button type="submit">add note</button>
-        </form>
         </div>
     )
+}
+
+const App = () => {
+  const [persons, setPersons] = useState([])
+  const [notificationType, setNotificationType] = useState('')
+  const [notification, setNotification] = useState('')
+  const [state, setState] = useState({
+    name: '',
+    number:'',
+  })
+  const [filter, setFilter] = useState('')
+
+  const handleInput = (event) => {
+    setState({
+        ...state,
+        [event.target.name]: event.target.value 
+    })
+  }
+
+  const handleFilter = (event) => {
+    setFilter(event.target.value)
+  }
+
+  const validatePerson = (name, number) => {
+
+    if(name === '' || number === ''){
+        alert('Please fill all the fields')
+        setState({
+            name: '',
+            number: ''
+        })
+        return false
+    }
+    
+    return true
+  }
+
+
+
+  const filteredPersons = persons.filter(person => person.name.toLowerCase().includes(filter.toLowerCase()))
+
+  useEffect(() => {
+    const fetchData = async () => {
+        const request = await phonesServices.getAll()
+        setPersons(request)
+    }
+
+    fetchData()
+  },[])
+  
+
+  const addPerson = async (event) => {
+    event.preventDefault()
+
+    if(!validatePerson(state.name, state.number)) return
+
+    const person = persons.find(person => person.name === state.name)
+    if(person){
+
+        const updateConfirm = window.confirm(`${person.name} ya existe en la libreria quieres actualizar el número de telefono`)
+        if(!updateConfirm) return
+
+        const changePerson = {...person, number: state.number}
+
+        updatePerson(person.id, changePerson)
+        setState({
+            name: '',
+            number: ''
+        })
+        return
+    }
+
+    const newPerson = {
+        name: state.name,
+        number: state.number,
+        id: String(persons.length + 1)
+    }
+    
+    const request = await phonesServices.addPerson(newPerson)
+
+    setPersons(persons.concat(request))
+    setNotification(`${newPerson.name} se ha añadido exitosamente`)
+    setNotificationType('success')
+    rest()
+    setState({
+        name: '',
+        number: ''
+    })
+  }
+
+  const deletePersons =  async (id) => {
+
+    const person = persons.find(person => person.id === id)
+
+
+    const confirmDelete = window.confirm(`Do you really want to delete ${person.name}?`)
+
+    if(!confirmDelete) return 
+
+    try{
+        await phonesServices.deletePerson(id)
+        setPersons(persons.filter(person => person.id !== id))
+        setNotification(`${person.name} se ha eliminado correctamente`)
+        setNotificationType('success')
+        rest()
+
+    }catch(error){
+        console.log(error.message)
+        setNotification(`${person.name} no está registrado en el sistema`)
+        setNotificationType('error')
+        rest()
+        setPersons(persons.filter(person => person.id !== id))
+    }
+  }
+
+  const rest = () => {
+    setTimeout(() => {
+        setNotification('')
+        setNotificationType('')
+    }, 4000)
+  }
+
+  const updatePerson = async (id, newPerson) => {
+
+    try{
+        const request = await phonesServices.updatePerson(id, newPerson)
+        setPersons(persons.map(person => person.id !== id ? person: request))
+        setNotification(`${newPerson.name} se ha actualizado correctamente`)
+        setNotificationType('success')
+        rest()
+        return true
+
+    }catch(error){
+        console.log(error.message)
+        setNotification(`${newPerson.name} no está registrado en el sistema`)
+        setNotificationType('error')
+        rest()
+        setPersons(persons.filter(person => person.id !== id))
+        return false
+    }
+  }
+
+  return (
+    <div>
+        <h2>Phonebook</h2>
+        {notification !== '' && <Notification message={notification} type={notificationType}/>}
+        <Filter handleFilter={handleFilter} filter={filter} />
+        <h3>add a New</h3>
+        <PersonForm addPerson={addPerson} handleInput={handleInput} state={state} />
+        <h3>Numbers</h3>
+        {filteredPersons.map((person) => <Persons key={person.id} name={person.name} number={person.number} deletePerson={() => deletePersons(person.id)} />)}
+    </div>
+  )
 }
 
 export default App
