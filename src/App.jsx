@@ -26,8 +26,7 @@ const App = () => {
   const getContacts = useCallback(async() => {
     
     const contacts = await phonesServices.getAll()
-    console.log(contacts.usuarios)
-    setPersons(contacts.usuarios)
+    setPersons(contacts.result)
   }, [])
 
 
@@ -67,6 +66,7 @@ const App = () => {
 
   
   const addPerson = async (event) => {
+   try{
     event.preventDefault()
 
     if(!validatePerson(state.name, state.number)) return
@@ -80,10 +80,6 @@ const App = () => {
         const changePerson = {...person, number: state.number}
 
         updatePerson(person.id, changePerson)
-        setState({
-            name: '',
-            number: ''
-        })
         return
     }
 
@@ -97,11 +93,19 @@ const App = () => {
     setNotification(`${newPerson.name} se ha añadido exitosamente`)
     setNotificationType('success')
     rest()
-    setState({
+    getContacts()
+
+   }catch(error){
+    setNotification(error.response.data.message)
+    setNotificationType('error')
+    rest()
+
+   } finally{
+      setState({
         name: '',
         number: ''
     })
-    getContacts()
+   }
   }
 
   const deletePersons =  async (id) => {
@@ -119,10 +123,10 @@ const App = () => {
         setNotification(`${person.name} se ha eliminado correctamente`)
         setNotificationType('success')
         rest()
+        getContacts()
 
     }catch(error){
-        console.log(error.message)
-        setNotification(`${person.name} no está registrado en el sistema`)
+        setNotification(error.response.data.message)
         setNotificationType('error')
         rest()
 
@@ -139,16 +143,17 @@ const App = () => {
   const updatePerson = async (id, newPerson) => {
 
     try{
-        const request = await phonesServices.updatePerson(id, newPerson)
+        await phonesServices.updatePerson(id, newPerson)
 
         setNotification(`${newPerson.name} se ha actualizado correctamente`)
         setNotificationType('success')
         rest()
+        getContacts()
         return true
 
     }catch(error){
-        console.log(error.message)
-        setNotification(`${newPerson.name} no está registrado en el sistema`)
+
+        setNotification(error.response.data.message)
         setNotificationType('error')
         rest()
         return false

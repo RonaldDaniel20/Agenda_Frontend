@@ -13,12 +13,12 @@ const addPerson = async(newPerson) => {
 }
 
 const deletePerson = async(id) => {
-    const request = await axios.delete(API_URL + `/${id}`)
+    const request = await axios.delete(API_URL + `/contact/${id}`)
     return request
 }
 
 const updatePerson = async (id, newPerson) => {
-    const request = await axios.put(API_URL + `/${id}`, newPerson)
+    const request = await axios.put(API_URL + `/contact/${id}`, newPerson)
     return request.data
 }
 
